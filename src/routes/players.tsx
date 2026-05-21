@@ -11,8 +11,9 @@ import { Switch } from "@/components/ui/switch";
 import { TierBadge } from "@/components/TierBadge";
 import { winrate } from "@/lib/lol";
 import { toast } from "sonner";
-import { RefreshCw, Trash2, UserPlus, Loader2, AlertCircle, Users, RotateCw } from "lucide-react";
+import { RefreshCw, Trash2, UserPlus, Loader2, AlertCircle, Users, RotateCw, Lock } from "lucide-react";
 import type { Role, CreatePlayerInput, RankEntry } from "@/lib/types";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/players")({
   head: () => ({ meta: [{ title: "Jogadores — LoL Friends Tracker" }] }),
@@ -24,6 +25,7 @@ const REGIONS = ["BR1", "NA1", "EUW1", "KR", "LA1", "LA2"];
 
 function PlayersPage() {
   const qc = useQueryClient();
+  const { isAdmin } = useAuth();
   const playersQ = useQuery({ queryKey: ["players"], queryFn: api.listPlayers });
   const players = playersQ.data ?? [];
 
@@ -86,60 +88,73 @@ function PlayersPage() {
           <h1 className="text-3xl md:text-4xl font-bold">Jogadores</h1>
           <p className="text-muted-foreground mt-1">Cadastre e acompanhe a galera.</p>
         </div>
-        <Button variant="outline" onClick={() => syncAll.mutate()} disabled={syncAll.isPending || players.length === 0}>
-          {syncAll.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCw className="w-4 h-4 mr-2" />}
-          Sincronizar todos
-        </Button>
+        {isAdmin && (
+          <Button variant="outline" onClick={() => syncAll.mutate()} disabled={syncAll.isPending || players.length === 0}>
+            {syncAll.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCw className="w-4 h-4 mr-2" />}
+            Sincronizar todos
+          </Button>
+        )}
       </header>
 
-      <Card className="p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <UserPlus className="w-5 h-5 text-primary" />
-          <h2 className="font-bold text-lg">Cadastrar jogador</h2>
-        </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!form.nickname || !form.riotGameName) return;
-            create.mutate(form, {
-              onSuccess: () => setForm({ ...form, nickname: "", riotGameName: "" }),
-            });
-          }}
-          className="grid grid-cols-1 md:grid-cols-6 gap-3"
-        >
-          <Field label="Apelido"><Input value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} placeholder="Lucas" required /></Field>
-          <Field label="Riot Game Name"><Input value={form.riotGameName} onChange={(e) => setForm({ ...form, riotGameName: e.target.value })} placeholder="LucasCB" required /></Field>
-          <Field label="Tag Line"><Input value={form.riotTagLine} onChange={(e) => setForm({ ...form, riotTagLine: e.target.value })} placeholder="BR1" required /></Field>
-          <Field label="Região">
-            <Select value={form.region} onValueChange={(v) => setForm({ ...form, region: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-            </Select>
-          </Field>
-          <Field label="Role principal">
-            <Select value={form.mainRole} onValueChange={(v) => setForm({ ...form, mainRole: v as Role })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-            </Select>
-          </Field>
-          <Field label="Role secundária">
-            <Select value={form.secondaryRole} onValueChange={(v) => setForm({ ...form, secondaryRole: v as Role })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-            </Select>
-          </Field>
-          <div className="md:col-span-6 flex items-center justify-between gap-4 flex-wrap">
-            <label className="flex items-center gap-2 text-sm">
-              <Switch checked={form.active} onCheckedChange={(v) => setForm({ ...form, active: v })} />
-              Jogador ativo
-            </label>
-            <Button type="submit" disabled={create.isPending}>
-              {create.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Cadastrar jogador
-            </Button>
+      {!isAdmin && (
+        <Card className="p-4 flex items-center gap-3 border-warning/40 bg-warning/5">
+          <Lock className="w-4 h-4 text-warning" />
+          <p className="text-sm text-muted-foreground">
+            Você está como <span className="font-medium text-foreground">visitante</span>. Cadastro e sincronização estão desativados.
+          </p>
+        </Card>
+      )}
+
+      {isAdmin && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <UserPlus className="w-5 h-5 text-primary" />
+            <h2 className="font-bold text-lg">Cadastrar jogador</h2>
           </div>
-        </form>
-      </Card>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!form.nickname || !form.riotGameName) return;
+              create.mutate(form, {
+                onSuccess: () => setForm({ ...form, nickname: "", riotGameName: "" }),
+              });
+            }}
+            className="grid grid-cols-1 md:grid-cols-6 gap-3"
+          >
+            <Field label="Apelido"><Input value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} placeholder="Lucas" required /></Field>
+            <Field label="Riot Game Name"><Input value={form.riotGameName} onChange={(e) => setForm({ ...form, riotGameName: e.target.value })} placeholder="LucasCB" required /></Field>
+            <Field label="Tag Line"><Input value={form.riotTagLine} onChange={(e) => setForm({ ...form, riotTagLine: e.target.value })} placeholder="BR1" required /></Field>
+            <Field label="Região">
+              <Select value={form.region} onValueChange={(v) => setForm({ ...form, region: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Role principal">
+              <Select value={form.mainRole} onValueChange={(v) => setForm({ ...form, mainRole: v as Role })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <Field label="Role secundária">
+              <Select value={form.secondaryRole} onValueChange={(v) => setForm({ ...form, secondaryRole: v as Role })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+              </Select>
+            </Field>
+            <div className="md:col-span-6 flex items-center justify-between gap-4 flex-wrap">
+              <label className="flex items-center gap-2 text-sm">
+                <Switch checked={form.active} onCheckedChange={(v) => setForm({ ...form, active: v })} />
+                Jogador ativo
+              </label>
+              <Button type="submit" disabled={create.isPending}>
+                {create.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Cadastrar jogador
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
 
       <Card className="overflow-hidden">
         {playersQ.isLoading ? (
@@ -183,22 +198,26 @@ function PlayersPage() {
                         {r ? `${wr}%` : "-"}
                       </td>
                       <td className="p-3 pr-6 text-right">
-                        <div className="inline-flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => syncOne.mutate(p.id)}
-                            disabled={syncOne.isPending && syncOne.variables === p.id}
-                          >
-                            {syncOne.isPending && syncOne.variables === p.id
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <RefreshCw className="w-3.5 h-3.5" />}
-                            <span className="ml-1 hidden sm:inline">Sync</span>
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => del.mutate(p.id)}>
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
+                        {isAdmin ? (
+                          <div className="inline-flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => syncOne.mutate(p.id)}
+                              disabled={syncOne.isPending && syncOne.variables === p.id}
+                            >
+                              {syncOne.isPending && syncOne.variables === p.id
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <RefreshCw className="w-3.5 h-3.5" />}
+                              <span className="ml-1 hidden sm:inline">Sync</span>
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => del.mutate(p.id)}>
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground inline-flex items-center gap-1"><Lock className="w-3 h-3" />somente leitura</span>
+                        )}
                       </td>
                     </tr>
                   );
