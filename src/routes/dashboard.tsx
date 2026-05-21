@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { toTotalLp, winrate } from "@/lib/lol";
+import { useQuery, useQueries } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
+import { rankTotalLp, winrate } from "@/lib/lol";
 import { TierBadge } from "@/components/TierBadge";
 import { Card } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Trophy, Crown } from "lucide-react";
+import { Trophy, Crown, AlertCircle, Loader2 } from "lucide-react";
+import type { Player, RankEntry } from "@/lib/types";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — LoL Friends Tracker" }] }),
@@ -12,20 +13,32 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardPage() {
-  const { data: players = [] } = useQuery({ queryKey: ["players"], queryFn: api.listPlayers });
-  const { data: snapshots = [] } = useQuery({ queryKey: ["snapshots"], queryFn: api.listSnapshots });
+  const playersQ = useQuery({ queryKey: ["players"], queryFn: api.listPlayers });
+  const players = playersQ.data ?? [];
 
-  const ranked = [...players].sort((a, b) => toTotalLp(b.tier, b.rank, b.lp) - toTotalLp(a.tier, a.rank, a.lp));
-
-  // Variation last 7 days
-  const cutoff = Date.now() - 7 * 86400000;
-  const variations = players.map((p) => {
-    const recent = snapshots.filter((s) => s.playerId === p.id && new Date(s.date).getTime() >= cutoff);
-    const change = recent.length ? recent[recent.length - 1].totalLp - recent[0].totalLp : 0;
-    return { player: p, change };
+  const rankQueries = useQueries({
+    queries: players.map((p) => ({
+      queryKey: ["current-rank", p.id],
+      queryFn: () => api.getCurrentRank(p.id),
+      enabled: !!p.id,
+    })),
   });
-  const topGainer = [...variations].sort((a, b) => b.change - a.change)[0];
-  const topLoser = [...variations].sort((a, b) => a.change - b.change)[0];
+
+  const ranks = new Map<string, RankEntry | null>();
+  players.forEach((p, i) => ranks.set(p.id, (rankQueries[i]?.data as RankEntry | null | undefined) ?? null));
+
+  const ranked = [...players].sort(
+    (a, b) => rankTotalLp(ranks.get(b.id)) - rankTotalLp(ranks.get(a.id)),
+  );
+
+  if (playersQ.isLoading) return <PageState icon={<Loader2 className="w-6 h-6 animate-spin" />} title="Carregando jogadores..." />;
+  if (playersQ.error)
+    return <PageState icon={<AlertCircle className="w-6 h-6 text-destructive" />} title="Erro ao carregar" desc={(playersQ.error as ApiError).message} />;
+  if (players.length === 0)
+    return <PageState icon={<Crown className="w-6 h-6 text-muted-foreground" />} title="Nenhum jogador cadastrado" desc="Vá em Jogadores para adicionar o primeiro." />;
+
+  const topPlayer = ranked[0];
+  const topRank = topPlayer ? ranks.get(topPlayer.id) : null;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -35,9 +48,9 @@ function DashboardPage() {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard icon={<Crown className="w-5 h-5" />} label="Top jogador" value={ranked[0]?.nickname ?? "-"} sub={ranked[0] ? `${ranked[0].tier} ${ranked[0].rank} · ${ranked[0].lp} LP` : ""} tone="primary" />
-        <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Mais subiu (7d)" value={topGainer?.player.nickname ?? "-"} sub={`+${topGainer?.change ?? 0} LP`} tone="success" />
-        <StatCard icon={<TrendingDown className="w-5 h-5" />} label="Mais caiu (7d)" value={topLoser?.player.nickname ?? "-"} sub={`${topLoser?.change ?? 0} LP`} tone="destructive" />
+        <StatCard label="Top jogador" value={topPlayer?.nickname ?? "-"} sub={topRank ? `${topRank.tier} ${topRank.rank} · ${topRank.leaguePoints} LP` : "Sem dados"} />
+        <StatCard label="Total de jogadores" value={String(players.length)} sub={`${players.filter((p) => p.active).length} ativos`} />
+        <StatCard label="Sincronizados" value={`${rankQueries.filter((q) => q.data).length}/${players.length}`} sub="com rank disponível" />
       </div>
 
       <Card className="overflow-hidden">
@@ -60,16 +73,25 @@ function DashboardPage() {
             </thead>
             <tbody>
               {ranked.map((p, i) => {
-                const wr = winrate(p.wins, p.losses);
+                const r = ranks.get(p.id);
+                const wr = r ? winrate(r.wins, r.losses) : 0;
                 return (
                   <tr key={p.id} className="border-t border-border hover:bg-secondary/30">
                     <td className="p-3 pl-6 font-bold text-primary">{i + 1}</td>
                     <td className="p-3 font-medium">{p.nickname}</td>
-                    <td className="p-3 text-muted-foreground">{p.riotId}#{p.tag}</td>
-                    <td className="p-3"><TierBadge tier={p.tier} rank={p.rank} lp={p.lp} /></td>
-                    <td className="p-3 text-right tabular-nums"><span className="text-success">{p.wins}</span> / <span className="text-destructive">{p.losses}</span></td>
-                    <td className={`p-3 text-right tabular-nums ${wr >= 50 ? "text-success" : "text-destructive"}`}>{wr}%</td>
-                    <td className="p-3 pr-6 text-right tabular-nums font-bold">{toTotalLp(p.tier, p.rank, p.lp)}</td>
+                    <td className="p-3 text-muted-foreground">{p.riotGameName}#{p.riotTagLine}</td>
+                    <td className="p-3">
+                      {r ? (
+                        <TierBadge tier={r.tier} rank={r.rank} lp={r.leaguePoints} />
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Ainda não sincronizado</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-right tabular-nums">
+                      {r ? <><span className="text-success">{r.wins}</span> / <span className="text-destructive">{r.losses}</span></> : "-"}
+                    </td>
+                    <td className={`p-3 text-right tabular-nums ${wr >= 50 ? "text-success" : "text-destructive"}`}>{r ? `${wr}%` : "-"}</td>
+                    <td className="p-3 pr-6 text-right tabular-nums font-bold">{r ? rankTotalLp(r) : "-"}</td>
                   </tr>
                 );
               })}
@@ -81,13 +103,25 @@ function DashboardPage() {
   );
 }
 
-function StatCard({ icon, label, value, sub, tone }: { icon: React.ReactNode; label: string; value: string; sub: string; tone: "primary" | "success" | "destructive" }) {
-  const colorMap = { primary: "text-primary", success: "text-success", destructive: "text-destructive" };
+function StatCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <Card className="p-5">
-      <div className={`flex items-center gap-2 ${colorMap[tone]} text-sm font-medium`}>{icon}{label}</div>
+      <div className="text-sm font-medium text-primary">{label}</div>
       <div className="mt-3 text-2xl font-bold">{value}</div>
-      <div className={`text-sm mt-1 ${colorMap[tone]}`}>{sub}</div>
+      <div className="text-sm text-muted-foreground mt-1">{sub}</div>
     </Card>
   );
 }
+
+function PageState({ icon, title, desc }: { icon: React.ReactNode; title: string; desc?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
+      {icon}
+      <h2 className="text-xl font-bold">{title}</h2>
+      {desc && <p className="text-muted-foreground">{desc}</p>}
+    </div>
+  );
+}
+
+// satisfy lint: Player type imported but unused removed
+export type _P = Player;

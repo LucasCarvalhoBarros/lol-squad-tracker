@@ -1,47 +1,65 @@
-// API client layer — currently returns mock data, ready to be swapped for AWS REST.
-import type { Player, Snapshot } from "./types";
-import { mockPlayers, mockSnapshots } from "./mock-data";
+// REST client for the AWS backend.
+import type { Player, RankEntry, CreatePlayerInput } from "./types";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
-const USE_MOCKS = !BASE_URL;
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ??
+  "https://yqv7bbhcye.execute-api.us-east-1.amazonaws.com/prod-lol-graphs";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  return res.json() as Promise<T>;
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
 }
 
-const delay = <T>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 150));
-
-let playersStore = [...mockPlayers];
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      ...init,
+    });
+  } catch (e) {
+    throw new ApiError("Não foi possível conectar à API. Verifique sua conexão.", 0);
+  }
+  if (!res.ok) {
+    let msg = `Erro ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body?.message) msg = body.message;
+      else if (body?.error) msg = body.error;
+    } catch {
+      // ignore
+    }
+    throw new ApiError(msg, res.status);
+  }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
 
 export const api = {
-  listPlayers(): Promise<Player[]> {
-    return USE_MOCKS ? delay(playersStore) : request("/players");
-  },
-  getPlayer(id: string): Promise<Player | undefined> {
-    return USE_MOCKS ? delay(playersStore.find((p) => p.id === id)) : request(`/players/${id}`);
-  },
-  createPlayer(p: Omit<Player, "id" | "tier" | "rank" | "lp" | "wins" | "losses" | "syncStatus" | "lastSyncAt" | "startTotalLp">): Promise<Player> {
-    if (USE_MOCKS) {
-      const np: Player = {
-        ...p, id: crypto.randomUUID(),
-        tier: "GOLD", rank: "IV", lp: 0, wins: 0, losses: 0,
-        syncStatus: "syncing", lastSyncAt: new Date().toISOString(), startTotalLp: 1200,
-      };
-      playersStore = [...playersStore, np];
-      return delay(np);
+  listPlayers: () => request<Player[]>("/players"),
+  createPlayer: (input: CreatePlayerInput) =>
+    request<Player>("/players", { method: "POST", body: JSON.stringify(input) }),
+  updatePlayer: (id: string, patch: Partial<CreatePlayerInput>) =>
+    request<Player>(`/players/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  deletePlayer: (id: string) =>
+    request<void>(`/players/${id}`, { method: "DELETE" }),
+
+  syncPlayer: (id: string) =>
+    request<unknown>(`/sync/player/${id}`, { method: "POST" }),
+  syncAll: () => request<unknown>("/sync/all", { method: "POST" }),
+
+  // Returns null on 404 (player not yet synced)
+  async getCurrentRank(id: string): Promise<RankEntry | null> {
+    try {
+      return await request<RankEntry>(`/players/${id}/current-rank`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
     }
-    return request("/players", { method: "POST", body: JSON.stringify(p) });
   },
-  deletePlayer(id: string): Promise<void> {
-    if (USE_MOCKS) { playersStore = playersStore.filter((p) => p.id !== id); return delay(undefined); }
-    return request(`/players/${id}`, { method: "DELETE" });
-  },
-  listSnapshots(): Promise<Snapshot[]> {
-    return USE_MOCKS ? delay(mockSnapshots) : request("/snapshots");
-  },
+  getRankHistory: (id: string) =>
+    request<RankEntry[]>(`/players/${id}/rank-history`),
 };

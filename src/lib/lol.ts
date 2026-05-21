@@ -1,4 +1,4 @@
-import type { Rank, Tier } from "./types";
+import type { Rank, Tier, RankEntry } from "./types";
 
 const TIER_VALUE: Record<Tier, number> = {
   IRON: 0, BRONZE: 400, SILVER: 800, GOLD: 1200, PLATINUM: 1600,
@@ -7,7 +7,13 @@ const TIER_VALUE: Record<Tier, number> = {
 const RANK_VALUE: Record<Rank, number> = { IV: 0, III: 100, II: 200, I: 300 };
 
 export function toTotalLp(tier: Tier, rank: Rank, lp: number) {
-  return TIER_VALUE[tier] + RANK_VALUE[rank] + lp;
+  return (TIER_VALUE[tier] ?? 0) + (RANK_VALUE[rank] ?? 0) + lp;
+}
+
+export function rankTotalLp(r: RankEntry | null | undefined): number {
+  if (!r) return 0;
+  if (typeof r.totalPoints === "number") return r.totalPoints;
+  return toTotalLp(r.tier, r.rank, r.leaguePoints);
 }
 
 export function tierColor(tier: Tier): string {
@@ -16,7 +22,7 @@ export function tierColor(tier: Tier): string {
     PLATINUM: "#5fb6a0", EMERALD: "#3ec77a", DIAMOND: "#76d4ff",
     MASTER: "#c463ff", GRANDMASTER: "#ff6b6b", CHALLENGER: "#ffd566",
   };
-  return map[tier];
+  return map[tier] ?? "#888";
 }
 
 export function winrate(w: number, l: number) {
