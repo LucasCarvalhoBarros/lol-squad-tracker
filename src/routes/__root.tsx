@@ -72,14 +72,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Lol Friends Tracker" },
+      { name: "description", content: "Track League of Legends player stats and team compositions for your friends." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Lol Friends Tracker" },
+      { property: "og:description", content: "Track League of Legends player stats and team compositions for your friends." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Lol Friends Tracker" },
+      { name: "twitter:description", content: "Track League of Legends player stats and team compositions for your friends." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/894b8563-5251-4642-a582-686984ab8da6/id-preview-e2e2180a--7c94e4eb-0ed8-4bd7-a1ac-613d33305330.lovable.app-1779396256721.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/894b8563-5251-4642-a582-686984ab8da6/id-preview-e2e2180a--7c94e4eb-0ed8-4bd7-a1ac-613d33305330.lovable.app-1779396256721.png" },
     ],
     links: [
       {
