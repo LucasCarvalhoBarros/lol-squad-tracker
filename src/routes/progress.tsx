@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { toTotalLp, winrate } from "@/lib/lol";
+import { useQuery, useQueries } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
+import { rankTotalLp, winrate } from "@/lib/lol";
 import { Card } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Activity, Target } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, Target, Loader2, AlertCircle } from "lucide-react";
+import type { RankEntry } from "@/lib/types";
 
 export const Route = createFileRoute("/progress")({
   head: () => ({ meta: [{ title: "Progresso — LoL Friends Tracker" }] }),
@@ -11,23 +12,47 @@ export const Route = createFileRoute("/progress")({
 });
 
 function ProgressPage() {
-  const { data: players = [] } = useQuery({ queryKey: ["players"], queryFn: api.listPlayers });
-  const { data: snapshots = [] } = useQuery({ queryKey: ["snapshots"], queryFn: api.listSnapshots });
+  const playersQ = useQuery({ queryKey: ["players"], queryFn: api.listPlayers });
+  const players = playersQ.data ?? [];
 
-  const rows = players.map((p) => {
-    const current = toTotalLp(p.tier, p.rank, p.lp);
-    const balance = current - p.startTotalLp;
-    const playerSnaps = snapshots.filter((s) => s.playerId === p.id);
-    const deltas = playerSnaps.map((s) => s.delta);
-    const variance = deltas.length ? Math.sqrt(deltas.reduce((a, d) => a + d * d, 0) / deltas.length) : 0;
-    return { player: p, balance, current, wr: winrate(p.wins, p.losses), variance };
+  const historyQueries = useQueries({
+    queries: players.map((p) => ({
+      queryKey: ["rank-history", p.id],
+      queryFn: () => api.getRankHistory(p.id),
+    })),
   });
 
+  if (playersQ.isLoading) {
+    return <div className="py-24 text-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin inline mr-2" />Carregando...</div>;
+  }
+  if (playersQ.error) {
+    return <div className="py-24 text-center text-destructive"><AlertCircle className="w-5 h-5 inline mr-2" />{(playersQ.error as ApiError).message}</div>;
+  }
+  if (players.length === 0) {
+    return <div className="py-24 text-center text-muted-foreground">Nenhum jogador cadastrado.</div>;
+  }
+
+  const rows = players.map((p, i) => {
+    const history = (historyQueries[i]?.data as RankEntry[] | undefined) ?? [];
+    const sorted = [...history].sort((a, b) => a.snapshotDate.localeCompare(b.snapshotDate));
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const start = first ? rankTotalLp(first) : 0;
+    const current = last ? rankTotalLp(last) : 0;
+    const balance = current - start;
+    const deltas: number[] = [];
+    for (let k = 1; k < sorted.length; k++) deltas.push(rankTotalLp(sorted[k]) - rankTotalLp(sorted[k - 1]));
+    const variance = deltas.length ? Math.sqrt(deltas.reduce((a, d) => a + d * d, 0) / deltas.length) : 0;
+    const wr = last ? winrate(last.wins, last.losses) : 0;
+    return { player: p, start, current, balance, variance, wr, hasData: !!last };
+  });
+
+  const withData = rows.filter((r) => r.hasData);
   const sorted = [...rows].sort((a, b) => b.balance - a.balance);
-  const top = sorted[0];
-  const bottom = sorted[sorted.length - 1];
-  const consistent = [...rows].sort((a, b) => a.variance - b.variance)[0];
-  const bestWr = [...rows].sort((a, b) => b.wr - a.wr)[0];
+  const top = withData.length ? [...withData].sort((a, b) => b.balance - a.balance)[0] : null;
+  const bottom = withData.length ? [...withData].sort((a, b) => a.balance - b.balance)[0] : null;
+  const consistent = withData.length ? [...withData].sort((a, b) => a.variance - b.variance)[0] : null;
+  const bestWr = withData.length ? [...withData].sort((a, b) => b.wr - a.wr)[0] : null;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -37,10 +62,10 @@ function ProgressPage() {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <HighlightCard icon={<TrendingUp />} title="Maior evolução" name={top?.player.nickname} value={`+${top?.balance} LP`} tone="success" />
-        <HighlightCard icon={<TrendingDown />} title="Maior queda" name={bottom?.player.nickname} value={`${bottom?.balance} LP`} tone="destructive" />
-        <HighlightCard icon={<Activity />} title="Mais consistente" name={consistent?.player.nickname} value={`σ ${consistent?.variance.toFixed(1)}`} tone="primary" />
-        <HighlightCard icon={<Target />} title="Melhor winrate" name={bestWr?.player.nickname} value={`${bestWr?.wr}%`} tone="primary" />
+        <HighlightCard icon={<TrendingUp />} title="Maior evolução" name={top?.player.nickname} value={top ? `${top.balance >= 0 ? "+" : ""}${top.balance} LP` : "-"} tone="success" />
+        <HighlightCard icon={<TrendingDown />} title="Maior queda" name={bottom?.player.nickname} value={bottom ? `${bottom.balance} LP` : "-"} tone="destructive" />
+        <HighlightCard icon={<Activity />} title="Mais consistente" name={consistent?.player.nickname} value={consistent ? `σ ${consistent.variance.toFixed(1)}` : "-"} tone="primary" />
+        <HighlightCard icon={<Target />} title="Melhor winrate" name={bestWr?.player.nickname} value={bestWr ? `${bestWr.wr}%` : "-"} tone="primary" />
       </div>
 
       <Card className="overflow-hidden">
@@ -64,11 +89,11 @@ function ProgressPage() {
                 <tr key={r.player.id} className="border-t border-border hover:bg-secondary/30">
                   <td className="p-3 pl-6 font-bold text-primary">{i + 1}</td>
                   <td className="p-3 font-medium">{r.player.nickname}</td>
-                  <td className="p-3 text-right tabular-nums text-muted-foreground">{r.player.startTotalLp}</td>
-                  <td className="p-3 text-right tabular-nums">{r.current}</td>
-                  <td className={`p-3 text-right tabular-nums ${r.wr >= 50 ? "text-success" : "text-destructive"}`}>{r.wr}%</td>
+                  <td className="p-3 text-right tabular-nums text-muted-foreground">{r.hasData ? r.start : "-"}</td>
+                  <td className="p-3 text-right tabular-nums">{r.hasData ? r.current : "-"}</td>
+                  <td className={`p-3 text-right tabular-nums ${r.wr >= 50 ? "text-success" : "text-destructive"}`}>{r.hasData ? `${r.wr}%` : "-"}</td>
                   <td className={`p-3 pr-6 text-right tabular-nums font-bold text-lg ${r.balance >= 0 ? "text-success" : "text-destructive"}`}>
-                    {r.balance >= 0 ? "+" : ""}{r.balance}
+                    {r.hasData ? `${r.balance >= 0 ? "+" : ""}${r.balance}` : "-"}
                   </td>
                 </tr>
               ))}
