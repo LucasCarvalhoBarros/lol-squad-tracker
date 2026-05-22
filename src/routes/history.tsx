@@ -31,6 +31,7 @@ function HistoryPage() {
   const [period, setPeriod] = useState<7 | 30 | 999>(30);
   const [selectedPlayer, setSelectedPlayer] = useState<string>("all");
   const [intradayDate, setIntradayDate] = useState<string>("");
+  const [intradayPlayer, setIntradayPlayer] = useState<string>("all");
 
   const allHistory: (RankEntry & { nickname: string })[] = useMemo(() => {
     const out: (RankEntry & { nickname: string })[] = [];
@@ -158,8 +159,19 @@ function HistoryPage() {
                 <h2 className="font-bold text-lg">Evolução intradiária</h2>
                 <p className="text-sm text-muted-foreground">Ganho e perda de pontos ao longo do dia.</p>
               </div>
-              <div className="ml-auto flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Dia:</span>
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">Jogador:</span>
+                <select
+                  value={intradayPlayer}
+                  onChange={(e) => setIntradayPlayer(e.target.value)}
+                  className="bg-secondary border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="all">Todos</option>
+                  {players.map((p) => (
+                    <option key={p.id} value={p.id}>{p.nickname}</option>
+                  ))}
+                </select>
+                <span className="text-sm text-muted-foreground ml-2">Dia:</span>
                 <select
                   value={effectiveDay}
                   onChange={(e) => setIntradayDate(e.target.value)}
@@ -178,15 +190,17 @@ function HistoryPage() {
 
             {intradayDeltas.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-4">
-                {intradayDeltas.map((d) => (
-                  <div key={d.id} className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/60 border border-border text-xs">
-                    <span className="w-2 h-2 rounded-full" style={{ background: d.color }} />
-                    <span className="font-medium">{d.nickname}</span>
-                    <span className={d.delta > 0 ? "text-success font-semibold" : d.delta < 0 ? "text-destructive font-semibold" : "text-muted-foreground"}>
-                      {d.delta > 0 ? `+${d.delta}` : d.delta} LP
-                    </span>
-                  </div>
-                ))}
+                {intradayDeltas
+                  .filter((d) => intradayPlayer === "all" || d.id === intradayPlayer)
+                  .map((d) => (
+                    <div key={d.id} className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/60 border border-border text-xs">
+                      <span className="w-2 h-2 rounded-full" style={{ background: d.color }} />
+                      <span className="font-medium">{d.nickname}</span>
+                      <span className={d.delta > 0 ? "text-success font-semibold" : d.delta < 0 ? "text-destructive font-semibold" : "text-muted-foreground"}>
+                        {d.delta > 0 ? `+${d.delta}` : d.delta} LP
+                      </span>
+                    </div>
+                  ))}
               </div>
             )}
 
@@ -203,9 +217,14 @@ function HistoryPage() {
                     <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} domain={["dataMin - 10", "dataMax + 10"]} />
                     <Tooltip contentStyle={{ background: "oklch(0.21 0.025 260)", border: "1px solid oklch(0.3 0.03 260)", borderRadius: 8 }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    {players.map((p, i) => (
-                      <Line key={p.id} type="monotone" dataKey={p.id} name={p.nickname} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                    ))}
+                    {players
+                      .filter((p) => intradayPlayer === "all" || p.id === intradayPlayer)
+                      .map((p, i) => {
+                        const colorIndex = players.findIndex((pl) => pl.id === p.id);
+                        return (
+                          <Line key={p.id} type="monotone" dataKey={p.id} name={p.nickname} stroke={COLORS[colorIndex % COLORS.length]} strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                        );
+                      })}
                   </LineChart>
                 </ResponsiveContainer>
               )}
