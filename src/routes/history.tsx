@@ -152,6 +152,68 @@ function HistoryPage() {
             </div>
           </Card>
 
+          <Card className="p-6">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <div>
+                <h2 className="font-bold text-lg">Evolução intradiária</h2>
+                <p className="text-sm text-muted-foreground">Ganho e perda de pontos ao longo do dia.</p>
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Dia:</span>
+                <select
+                  value={effectiveDay}
+                  onChange={(e) => setIntradayDate(e.target.value)}
+                  className="bg-secondary border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {availableDays.length === 0 ? (
+                    <option value="">—</option>
+                  ) : (
+                    availableDays.map((d) => (
+                      <option key={d} value={d}>{new Date(d + "T12:00:00").toLocaleDateString("pt-BR")}</option>
+                    ))
+                  )}
+                </select>
+              </div>
+            </div>
+
+            {intradayDeltas.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {intradayDeltas.map((d) => (
+                  <div key={d.id} className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/60 border border-border text-xs">
+                    <span className="w-2 h-2 rounded-full" style={{ background: d.color }} />
+                    <span className="font-medium">{d.nickname}</span>
+                    <span className={d.delta > 0 ? "text-success font-semibold" : d.delta < 0 ? "text-destructive font-semibold" : "text-muted-foreground"}>
+                      {d.delta > 0 ? `+${d.delta}` : d.delta} LP
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="h-80">
+              {isLoading ? (
+                <div className="h-full flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mr-2" />Carregando...</div>
+              ) : intradayData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-muted-foreground">Sem snapshots para o dia selecionado.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={intradayData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 100% / 0.08)" />
+                    <XAxis dataKey="time" stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
+                    <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} domain={["dataMin - 10", "dataMax + 10"]} />
+                    <Tooltip contentStyle={{ background: "oklch(0.21 0.025 260)", border: "1px solid oklch(0.3 0.03 260)", borderRadius: 8 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    {players.map((p, i) => (
+                      <Line key={p.id} type="monotone" dataKey={p.id} name={p.nickname} stroke={COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </Card>
+
+
+
           <Card className="overflow-hidden">
             <div className="p-6 border-b border-border flex flex-wrap items-center gap-3">
               <h2 className="font-bold text-lg">Snapshots</h2>
