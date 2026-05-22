@@ -30,6 +30,7 @@ function HistoryPage() {
 
   const [period, setPeriod] = useState<7 | 30 | 999>(30);
   const [selectedPlayer, setSelectedPlayer] = useState<string>("all");
+  const [intradayDate, setIntradayDate] = useState<string>("");
 
   const allHistory: (RankEntry & { nickname: string })[] = useMemo(() => {
     const out: (RankEntry & { nickname: string })[] = [];
