@@ -19,11 +19,6 @@ function LoginPage() {
   const [pass, setPass] = useState("");
   const [error, setError] = useState("");
 
-  if (auth.isAuthed) {
-    navigate({ to: "/dashboard" });
-    return null;
-  }
-
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
