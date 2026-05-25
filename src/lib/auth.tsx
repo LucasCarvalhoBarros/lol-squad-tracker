@@ -12,6 +12,7 @@ type Ctx = {
   isAdmin: boolean;
   isGuest: boolean;
   isAuthed: boolean;
+  isReady: boolean;
   login: (user: string, pass: string) => boolean;
   loginAsGuest: () => void;
   logout: () => void;
