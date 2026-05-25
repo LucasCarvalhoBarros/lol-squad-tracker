@@ -21,12 +21,13 @@ export function AppLayout() {
   const isLoginRoute = location.pathname === "/login";
 
   useEffect(() => {
+    if (!auth.isReady) return;
     if (!auth.isAuthed && !isLoginRoute) {
       navigate({ to: "/login" });
     } else if (auth.isAuthed && isLoginRoute) {
       navigate({ to: "/dashboard" });
     }
-  }, [auth.isAuthed, isLoginRoute, navigate]);
+  }, [auth.isReady, auth.isAuthed, isLoginRoute, navigate]);
 
   if (isLoginRoute) return <Outlet />;
   if (!auth.isAuthed) return null;
