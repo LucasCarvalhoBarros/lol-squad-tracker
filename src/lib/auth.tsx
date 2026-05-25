@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAdmin: state.role === "admin",
     isGuest: state.role === "guest",
     isAuthed: state.role !== null,
+    isReady,
     login: (user, pass) => {
       if (user.trim() === ADMIN_USER && pass === ADMIN_PASS) {
         persist({ role: "admin" });
