@@ -23,6 +23,8 @@ export function AppLayout() {
   useEffect(() => {
     if (!auth.isAuthed && !isLoginRoute) {
       navigate({ to: "/login" });
+    } else if (auth.isAuthed && isLoginRoute) {
+      navigate({ to: "/dashboard" });
     }
   }, [auth.isAuthed, isLoginRoute, navigate]);
 
