@@ -22,6 +22,7 @@ const AuthCtx = createContext<Ctx | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ role: null });
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     try {
@@ -29,6 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (raw) setState(JSON.parse(raw));
     } catch {
       // ignore
+    } finally {
+      setIsReady(true);
     }
   }, []);
 
