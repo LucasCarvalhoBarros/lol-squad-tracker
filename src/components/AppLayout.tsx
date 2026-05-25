@@ -29,6 +29,7 @@ export function AppLayout() {
     }
   }, [auth.isReady, auth.isAuthed, isLoginRoute, navigate]);
 
+  if (!auth.isReady) return null;
   if (isLoginRoute) return <Outlet />;
   if (!auth.isAuthed) return null;
 
