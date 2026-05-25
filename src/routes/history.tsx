@@ -84,6 +84,11 @@ function HistoryPage() {
     return Array.from(rows.values()).sort((a, b) => (a.ts as number) - (b.ts as number));
   }, [allHistory, effectiveDay]);
 
+  const visibleIntradayData = useMemo(() => {
+    if (intradayPlayer === "all") return intradayData;
+    return intradayData.filter((row) => row[intradayPlayer] !== undefined);
+  }, [intradayData, intradayPlayer]);
+
   // Delta per player on selected day (last - first snapshot)
   const intradayDeltas = useMemo(() => {
     if (!effectiveDay) return [] as { id: string; nickname: string; delta: number; color: string }[];
@@ -207,11 +212,11 @@ function HistoryPage() {
             <div className="h-80">
               {isLoading ? (
                 <div className="h-full flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mr-2" />Carregando...</div>
-              ) : intradayData.length === 0 ? (
+              ) : visibleIntradayData.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-muted-foreground">Sem snapshots para o dia selecionado.</div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={intradayData}>
+                  <LineChart data={visibleIntradayData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 100% / 0.08)" />
                     <XAxis dataKey="time" stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
                     <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} domain={["dataMin - 10", "dataMax + 10"]} />

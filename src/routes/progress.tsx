@@ -92,7 +92,11 @@ function ProgressPage() {
                   <td className="p-3 text-right tabular-nums text-muted-foreground">{r.hasData ? r.start : "-"}</td>
                   <td className="p-3 text-right tabular-nums">{r.hasData ? r.current : "-"}</td>
                   <td className={`p-3 text-right tabular-nums ${r.wr >= 50 ? "text-success" : "text-destructive"}`}>{r.hasData ? `${r.wr}%` : "-"}</td>
-                  <td className={`p-3 pr-6 text-right tabular-nums font-bold text-lg ${r.balance >= 0 ? (r.player.nickname === "Titi" ? "text-destructive" : "text-success") : "text-destructive"}`}>
+                  <td className={`p-3 pr-6 text-right tabular-nums font-bold text-lg ${
+                    r.player.nickname === "Titi"
+                      ? (r.balance >= 0 ? "text-destructive" : "text-success")
+                      : (r.balance >= 0 ? "text-success" : "text-destructive")
+                  }`}>
                     {r.hasData ? `${r.balance >= 0 ? "+" : ""}${r.balance}` : "-"}
                   </td>
                 </tr>
