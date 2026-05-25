@@ -12,6 +12,7 @@ type Ctx = {
   isAdmin: boolean;
   isGuest: boolean;
   isAuthed: boolean;
+  isReady: boolean;
   login: (user: string, pass: string) => boolean;
   loginAsGuest: () => void;
   logout: () => void;
@@ -21,6 +22,7 @@ const AuthCtx = createContext<Ctx | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ role: null });
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     try {
@@ -28,6 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (raw) setState(JSON.parse(raw));
     } catch {
       // ignore
+    } finally {
+      setIsReady(true);
     }
   }, []);
 
@@ -41,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAdmin: state.role === "admin",
     isGuest: state.role === "guest",
     isAuthed: state.role !== null,
+    isReady,
     login: (user, pass) => {
       if (user.trim() === ADMIN_USER && pass === ADMIN_PASS) {
         persist({ role: "admin" });
