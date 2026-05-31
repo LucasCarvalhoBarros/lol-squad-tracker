@@ -94,6 +94,13 @@ function HistoryPage() {
   }, [filtered, players]);
 
 
+  const visibleLpRows = dailyPlayer === "all"
+    ? dailyStats.lpRows
+    : dailyStats.lpRows.filter((r) => r[dailyPlayer] !== undefined);
+  const visibleMatchRows = dailyPlayer === "all"
+    ? dailyStats.matchRows
+    : dailyStats.matchRows.filter((r) => r[dailyPlayer] !== undefined);
+
   const tableRows = filtered
     .filter((s) => selectedPlayer === "all" || s.playerId === selectedPlayer)
     .sort((a, b) => b.snapshotDate.localeCompare(a.snapshotDate))
@@ -172,11 +179,11 @@ function HistoryPage() {
             <div className="h-80">
               {isLoading ? (
                 <div className="h-full flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mr-2" />Carregando...</div>
-              ) : dailyStats.lpRows.length === 0 ? (
+              ) : visibleLpRows.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados no período.</div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dailyStats.lpRows}>
+                  <BarChart data={visibleLpRows}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 100% / 0.08)" />
                     <XAxis dataKey="date" stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
                     <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
@@ -202,11 +209,11 @@ function HistoryPage() {
             <div className="h-80">
               {isLoading ? (
                 <div className="h-full flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mr-2" />Carregando...</div>
-              ) : dailyStats.matchRows.length === 0 ? (
+              ) : visibleMatchRows.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados no período.</div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dailyStats.matchRows}>
+                  <BarChart data={visibleMatchRows}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 100% / 0.08)" />
                     <XAxis dataKey="date" stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
                     <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} allowDecimals={false} />
