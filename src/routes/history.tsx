@@ -150,6 +150,20 @@ function HistoryPage() {
             </div>
           </Card>
 
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">Jogador (dashboards diários):</span>
+            <select
+              value={dailyPlayer}
+              onChange={(e) => setDailyPlayer(e.target.value)}
+              className="bg-secondary border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="all">Todos</option>
+              {players.map((p) => (
+                <option key={p.id} value={p.id}>{p.nickname}</option>
+              ))}
+            </select>
+          </div>
+
           <Card className="p-6">
             <div className="mb-4">
               <h2 className="font-bold text-lg">Saldo diário de LP</h2>
@@ -168,9 +182,12 @@ function HistoryPage() {
                     <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
                     <Tooltip contentStyle={{ background: "oklch(0.21 0.025 260)", border: "1px solid oklch(0.3 0.03 260)", borderRadius: 8 }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    {players.map((p, i) => (
-                      <Bar key={p.id} dataKey={p.id} name={p.nickname} fill={COLORS[i % COLORS.length]} />
-                    ))}
+                    {players
+                      .filter((p) => dailyPlayer === "all" || p.id === dailyPlayer)
+                      .map((p) => {
+                        const i = players.findIndex((pl) => pl.id === p.id);
+                        return <Bar key={p.id} dataKey={p.id} name={p.nickname} fill={COLORS[i % COLORS.length]} />;
+                      })}
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -195,14 +212,18 @@ function HistoryPage() {
                     <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: "oklch(0.21 0.025 260)", border: "1px solid oklch(0.3 0.03 260)", borderRadius: 8 }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    {players.map((p, i) => (
-                      <Bar key={p.id} dataKey={p.id} name={p.nickname} fill={COLORS[i % COLORS.length]} />
-                    ))}
+                    {players
+                      .filter((p) => dailyPlayer === "all" || p.id === dailyPlayer)
+                      .map((p) => {
+                        const i = players.findIndex((pl) => pl.id === p.id);
+                        return <Bar key={p.id} dataKey={p.id} name={p.nickname} fill={COLORS[i % COLORS.length]} />;
+                      })}
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </div>
           </Card>
+
 
 
 
