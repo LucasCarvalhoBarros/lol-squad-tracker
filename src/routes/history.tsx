@@ -6,7 +6,7 @@ import { rankTotalLp } from "@/lib/lol";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TierBadge } from "@/components/TierBadge";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Loader2, AlertCircle, LineChart as LineChartIcon } from "lucide-react";
 import type { RankEntry } from "@/lib/types";
 
@@ -30,8 +30,6 @@ function HistoryPage() {
 
   const [period, setPeriod] = useState<7 | 30 | 999>(30);
   const [selectedPlayer, setSelectedPlayer] = useState<string>("all");
-  const [intradayDate, setIntradayDate] = useState<string>("");
-  const [intradayPlayer, setIntradayPlayer] = useState<string>("all");
 
   const allHistory: (RankEntry & { nickname: string })[] = useMemo(() => {
     const out: (RankEntry & { nickname: string })[] = [];
@@ -56,51 +54,44 @@ function HistoryPage() {
     return Array.from(byDate.values()).sort((a, b) => (a.date as string).localeCompare(b.date as string));
   }, [filtered]);
 
-  // Available days across all history (for intraday selector)
-  const availableDays = useMemo(() => {
-    const set = new Set<string>();
-    allHistory.forEach((s) => {
+  // Per-day delta of LP and matches for each player (within selected period)
+  const dailyStats = useMemo(() => {
+    // group by day -> playerId -> sorted snapshots
+    const byDayPlayer = new Map<string, Map<string, RankEntry[]>>();
+    filtered.forEach((s) => {
       const day = (s.createdAt ?? s.snapshotDate).slice(0, 10);
-      set.add(day);
+      if (!byDayPlayer.has(day)) byDayPlayer.set(day, new Map());
+      const m = byDayPlayer.get(day)!;
+      if (!m.has(s.playerId)) m.set(s.playerId, []);
+      m.get(s.playerId)!.push(s);
     });
-    return Array.from(set).sort((a, b) => b.localeCompare(a));
-  }, [allHistory]);
 
-  const effectiveDay = intradayDate || availableDays[0] || "";
+    const lpRows: Record<string, number | string>[] = [];
+    const matchRows: Record<string, number | string>[] = [];
+    const days = Array.from(byDayPlayer.keys()).sort();
 
-  // Intraday: group snapshots of selected day by timestamp, one series per player
-  const intradayData = useMemo(() => {
-    if (!effectiveDay) return [];
-    const rows = new Map<string, Record<string, number | string>>();
-    allHistory.forEach((s) => {
-      const ts = s.createdAt ?? s.snapshotDate;
-      if (!ts.startsWith(effectiveDay)) return;
-      const d = new Date(ts);
-      const key = ts;
-      const label = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      if (!rows.has(key)) rows.set(key, { time: label, ts: d.getTime() });
-      rows.get(key)![s.playerId] = rankTotalLp(s);
+    days.forEach((day) => {
+      const lpRow: Record<string, number | string> = { date: day };
+      const mRow: Record<string, number | string> = { date: day };
+      const m = byDayPlayer.get(day)!;
+      players.forEach((p) => {
+        const snaps = (m.get(p.id) ?? []).slice().sort((a, b) =>
+          (a.createdAt ?? a.snapshotDate).localeCompare(b.createdAt ?? b.snapshotDate)
+        );
+        if (snaps.length >= 2) {
+          const first = snaps[0];
+          const last = snaps[snaps.length - 1];
+          lpRow[p.id] = rankTotalLp(last) - rankTotalLp(first);
+          mRow[p.id] = (last.wins + last.losses) - (first.wins + first.losses);
+        }
+      });
+      lpRows.push(lpRow);
+      matchRows.push(mRow);
     });
-    return Array.from(rows.values()).sort((a, b) => (a.ts as number) - (b.ts as number));
-  }, [allHistory, effectiveDay]);
 
-  const visibleIntradayData = useMemo(() => {
-    if (intradayPlayer === "all") return intradayData;
-    return intradayData.filter((row) => row[intradayPlayer] !== undefined);
-  }, [intradayData, intradayPlayer]);
+    return { lpRows, matchRows };
+  }, [filtered, players]);
 
-  // Delta per player on selected day (last - first snapshot)
-  const intradayDeltas = useMemo(() => {
-    if (!effectiveDay) return [] as { id: string; nickname: string; delta: number; color: string }[];
-    return players.map((p, i) => {
-      const pts = allHistory
-        .filter((s) => s.playerId === p.id && (s.createdAt ?? s.snapshotDate).startsWith(effectiveDay))
-        .sort((a, b) => (a.createdAt ?? a.snapshotDate).localeCompare(b.createdAt ?? b.snapshotDate))
-        .map((s) => rankTotalLp(s));
-      const delta = pts.length >= 2 ? pts[pts.length - 1] - pts[0] : 0;
-      return { id: p.id, nickname: p.nickname, delta, color: COLORS[i % COLORS.length] };
-    }).filter((d) => d.delta !== 0 || allHistory.some((s) => s.playerId === d.id && (s.createdAt ?? s.snapshotDate).startsWith(effectiveDay)));
-  }, [players, allHistory, effectiveDay]);
 
   const tableRows = filtered
     .filter((s) => selectedPlayer === "all" || s.playerId === selectedPlayer)
@@ -159,82 +150,60 @@ function HistoryPage() {
           </Card>
 
           <Card className="p-6">
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <div>
-                <h2 className="font-bold text-lg">Evolução intradiária</h2>
-                <p className="text-sm text-muted-foreground">Ganho e perda de pontos ao longo do dia.</p>
-              </div>
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Jogador:</span>
-                <select
-                  value={intradayPlayer}
-                  onChange={(e) => setIntradayPlayer(e.target.value)}
-                  className="bg-secondary border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="all">Todos</option>
-                  {players.map((p) => (
-                    <option key={p.id} value={p.id}>{p.nickname}</option>
-                  ))}
-                </select>
-                <span className="text-sm text-muted-foreground ml-2">Dia:</span>
-                <select
-                  value={effectiveDay}
-                  onChange={(e) => setIntradayDate(e.target.value)}
-                  className="bg-secondary border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  {availableDays.length === 0 ? (
-                    <option value="">—</option>
-                  ) : (
-                    availableDays.map((d) => (
-                      <option key={d} value={d}>{new Date(d + "T12:00:00").toLocaleDateString("pt-BR")}</option>
-                    ))
-                  )}
-                </select>
-              </div>
+            <div className="mb-4">
+              <h2 className="font-bold text-lg">Saldo diário de LP</h2>
+              <p className="text-sm text-muted-foreground">Quanto cada jogador ganhou ou perdeu por dia.</p>
             </div>
-
-            {intradayDeltas.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                {intradayDeltas
-                  .filter((d) => intradayPlayer === "all" || d.id === intradayPlayer)
-                  .map((d) => (
-                    <div key={d.id} className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/60 border border-border text-xs">
-                      <span className="w-2 h-2 rounded-full" style={{ background: d.color }} />
-                      <span className="font-medium">{d.nickname}</span>
-                      <span className={d.delta > 0 ? "text-success font-semibold" : d.delta < 0 ? "text-destructive font-semibold" : "text-muted-foreground"}>
-                        {d.delta > 0 ? `+${d.delta}` : d.delta} LP
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            )}
-
             <div className="h-80">
               {isLoading ? (
                 <div className="h-full flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mr-2" />Carregando...</div>
-              ) : visibleIntradayData.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-muted-foreground">Sem snapshots para o dia selecionado.</div>
+              ) : dailyStats.lpRows.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados no período.</div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={visibleIntradayData}>
+                  <BarChart data={dailyStats.lpRows}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 100% / 0.08)" />
-                    <XAxis dataKey="time" stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
-                    <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} domain={["dataMin - 10", "dataMax + 10"]} />
+                    <XAxis dataKey="date" stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
+                    <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
                     <Tooltip contentStyle={{ background: "oklch(0.21 0.025 260)", border: "1px solid oklch(0.3 0.03 260)", borderRadius: 8 }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    {players
-                      .filter((p) => intradayPlayer === "all" || p.id === intradayPlayer)
-                      .map((p, i) => {
-                        const colorIndex = players.findIndex((pl) => pl.id === p.id);
-                        return (
-                          <Line key={p.id} type="monotone" dataKey={p.id} name={p.nickname} stroke={COLORS[colorIndex % COLORS.length]} strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                        );
-                      })}
-                  </LineChart>
+                    {players.map((p, i) => (
+                      <Bar key={p.id} dataKey={p.id} name={p.nickname} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </BarChart>
                 </ResponsiveContainer>
               )}
             </div>
           </Card>
+
+          <Card className="p-6">
+            <div className="mb-4">
+              <h2 className="font-bold text-lg">Partidas por dia</h2>
+              <p className="text-sm text-muted-foreground">Quantas partidas cada jogador jogou por dia.</p>
+            </div>
+            <div className="h-80">
+              {isLoading ? (
+                <div className="h-full flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mr-2" />Carregando...</div>
+              ) : dailyStats.matchRows.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados no período.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dailyStats.matchRows}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 100% / 0.08)" />
+                    <XAxis dataKey="date" stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
+                    <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: "oklch(0.21 0.025 260)", border: "1px solid oklch(0.3 0.03 260)", borderRadius: 8 }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    {players.map((p, i) => (
+                      <Bar key={p.id} dataKey={p.id} name={p.nickname} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </Card>
+
+
 
 
 
