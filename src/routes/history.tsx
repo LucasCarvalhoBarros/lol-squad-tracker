@@ -6,7 +6,18 @@ import { rankTotalLp } from "@/lib/lol";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TierBadge } from "@/components/TierBadge";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import { Loader2, AlertCircle, LineChart as LineChartIcon } from "lucide-react";
 import type { RankEntry } from "@/lib/types";
 
@@ -15,7 +26,18 @@ export const Route = createFileRoute("/history")({
   component: HistoryPage,
 });
 
-const COLORS = ["#f5c542", "#9b6bff", "#3ec77a", "#ff6b6b", "#76d4ff", "#ff9f43", "#a0e7e5", "#ff7eb6", "#7afcd5", "#ffd566"];
+const COLORS = [
+  "#f5c542",
+  "#9b6bff",
+  "#3ec77a",
+  "#ff6b6b",
+  "#76d4ff",
+  "#ff9f43",
+  "#a0e7e5",
+  "#ff7eb6",
+  "#7afcd5",
+  "#ffd566",
+];
 
 function HistoryPage() {
   const playersQ = useQuery({ queryKey: ["players"], queryFn: api.listPlayers });
@@ -52,7 +74,9 @@ function HistoryPage() {
       const row = byDate.get(day)!;
       row[s.playerId] = rankTotalLp(s);
     });
-    return Array.from(byDate.values()).sort((a, b) => (a.date as string).localeCompare(b.date as string));
+    return Array.from(byDate.values()).sort((a, b) =>
+      (a.date as string).localeCompare(b.date as string),
+    );
   }, [filtered]);
 
   // Per-day delta of LP and matches for each player (within selected period)
@@ -76,14 +100,16 @@ function HistoryPage() {
       const mRow: Record<string, number | string> = { date: day };
       const m = byDayPlayer.get(day)!;
       players.forEach((p) => {
-        const snaps = (m.get(p.id) ?? []).slice().sort((a, b) =>
-          (a.createdAt ?? a.snapshotDate).localeCompare(b.createdAt ?? b.snapshotDate)
-        );
+        const snaps = (m.get(p.id) ?? [])
+          .slice()
+          .sort((a, b) =>
+            (a.createdAt ?? a.snapshotDate).localeCompare(b.createdAt ?? b.snapshotDate),
+          );
         if (snaps.length >= 2) {
           const first = snaps[0];
           const last = snaps[snaps.length - 1];
           lpRow[p.id] = rankTotalLp(last) - rankTotalLp(first);
-          mRow[p.id] = (last.wins + last.losses) - (first.wins + first.losses);
+          mRow[p.id] = last.wins + last.losses - (first.wins + first.losses);
         }
       });
       lpRows.push(lpRow);
@@ -93,24 +119,26 @@ function HistoryPage() {
     return { lpRows, matchRows };
   }, [filtered, players]);
 
-
   const selectedDailyPlayer = players.find((p) => p.id === dailyPlayer);
-  const dailyPlayers = dailyPlayer === "all" ? players : selectedDailyPlayer ? [selectedDailyPlayer] : [];
+  const dailyPlayers =
+    dailyPlayer === "all" ? players : selectedDailyPlayer ? [selectedDailyPlayer] : [];
 
-  const visibleLpRows = dailyPlayer === "all"
-    ? dailyStats.lpRows
-    : dailyStats.lpRows.reduce<Record<string, number | string>[]>((rows, row) => {
-      const value = row[dailyPlayer];
-      if (typeof value === "number") rows.push({ date: row.date, selected: value });
-      return rows;
-    }, []);
-  const visibleMatchRows = dailyPlayer === "all"
-    ? dailyStats.matchRows
-    : dailyStats.matchRows.reduce<Record<string, number | string>[]>((rows, row) => {
-      const value = row[dailyPlayer];
-      if (typeof value === "number") rows.push({ date: row.date, selected: value });
-      return rows;
-    }, []);
+  const visibleLpRows =
+    dailyPlayer === "all"
+      ? dailyStats.lpRows
+      : dailyStats.lpRows.reduce<Record<string, number | string>[]>((rows, row) => {
+          const value = row[dailyPlayer];
+          if (typeof value === "number") rows.push({ date: row.date, selected: value });
+          return rows;
+        }, []);
+  const visibleMatchRows =
+    dailyPlayer === "all"
+      ? dailyStats.matchRows
+      : dailyStats.matchRows.reduce<Record<string, number | string>[]>((rows, row) => {
+          const value = row[dailyPlayer];
+          if (typeof value === "number") rows.push({ date: row.date, selected: value });
+          return rows;
+        }, []);
 
   const tableRows = filtered
     .filter((s) => selectedPlayer === "all" || s.playerId === selectedPlayer)
@@ -131,8 +159,6 @@ function HistoryPage() {
         <Card className="p-10 text-center text-destructive flex flex-col items-center gap-2">
           <AlertCircle className="w-6 h-6" /> {error.message}
         </Card>
-
-
       ) : players.length === 0 && !isLoading ? (
         <Card className="p-10 text-center text-muted-foreground flex flex-col items-center gap-2">
           <LineChartIcon className="w-6 h-6" /> Cadastre jogadores para ver o histórico.
@@ -142,25 +168,56 @@ function HistoryPage() {
           <Card className="p-6">
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <span className="text-sm text-muted-foreground mr-2">Período:</span>
-              {[{ v: 7 as const, l: "7 dias" }, { v: 30 as const, l: "30 dias" }, { v: 999 as const, l: "Temporada" }].map((o) => (
-                <Button key={o.v} variant={period === o.v ? "default" : "outline"} size="sm" onClick={() => setPeriod(o.v)}>{o.l}</Button>
+              {[
+                { v: 7 as const, l: "7 dias" },
+                { v: 30 as const, l: "30 dias" },
+                { v: 999 as const, l: "Temporada" },
+              ].map((o) => (
+                <Button
+                  key={o.v}
+                  variant={period === o.v ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPeriod(o.v)}
+                >
+                  {o.l}
+                </Button>
               ))}
             </div>
             <div className="h-80">
               {isLoading ? (
-                <div className="h-full flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mr-2" />Carregando histórico...</div>
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Carregando histórico...
+                </div>
               ) : chartData.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados no período.</div>
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  Sem dados no período.
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 100% / 0.08)" />
                     <XAxis dataKey="date" stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
                     <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
-                    <Tooltip contentStyle={{ background: "oklch(0.21 0.025 260)", border: "1px solid oklch(0.3 0.03 260)", borderRadius: 8 }} />
+                    <Tooltip
+                      contentStyle={{
+                        background: "oklch(0.21 0.025 260)",
+                        border: "1px solid oklch(0.3 0.03 260)",
+                        borderRadius: 8,
+                      }}
+                    />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     {players.map((p, i) => (
-                      <Line key={p.id} type="monotone" dataKey={p.id} name={p.nickname} stroke={COLORS[i % COLORS.length]} dot={false} strokeWidth={2} connectNulls />
+                      <Line
+                        key={p.id}
+                        type="monotone"
+                        dataKey={p.id}
+                        name={p.nickname}
+                        stroke={COLORS[i % COLORS.length]}
+                        dot={false}
+                        strokeWidth={2}
+                        connectNulls
+                      />
                     ))}
                   </LineChart>
                 </ResponsiveContainer>
@@ -177,7 +234,9 @@ function HistoryPage() {
             >
               <option value="all">Todos</option>
               {players.map((p) => (
-                <option key={p.id} value={p.id}>{p.nickname}</option>
+                <option key={p.id} value={p.id}>
+                  {p.nickname}
+                </option>
               ))}
             </select>
           </div>
@@ -185,27 +244,58 @@ function HistoryPage() {
           <Card className="p-6">
             <div className="mb-4">
               <h2 className="font-bold text-lg">Saldo diário de LP</h2>
-              <p className="text-sm text-muted-foreground">Quanto cada jogador ganhou ou perdeu por dia.</p>
+              <p className="text-sm text-muted-foreground">
+                Quanto cada jogador ganhou ou perdeu por dia.
+              </p>
             </div>
             <div className="h-80">
               {isLoading ? (
-                <div className="h-full flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mr-2" />Carregando...</div>
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Carregando...
+                </div>
               ) : visibleLpRows.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados no período.</div>
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  Sem dados no período.
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={visibleLpRows}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 100% / 0.08)" />
                     <XAxis dataKey="date" stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
                     <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
-                    <Tooltip contentStyle={{ background: "oklch(0.21 0.025 260)", border: "1px solid oklch(0.3 0.03 260)", borderRadius: 8 }} />
+                    <Tooltip
+                      contentStyle={{
+                        background: "oklch(0.21 0.025 260)",
+                        border: "1px solid oklch(0.3 0.03 260)",
+                        borderRadius: 8,
+                      }}
+                    />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    {dailyPlayer === "all" ? dailyPlayers.map((p) => {
+                    {dailyPlayer === "all" ? (
+                      dailyPlayers.map((p) => {
                         const i = players.findIndex((pl) => pl.id === p.id);
-                        return <Bar key={p.id} dataKey={p.id} name={p.nickname} fill={COLORS[i % COLORS.length]} />;
-                      }) : selectedDailyPlayer ? (
-                        <Bar dataKey="selected" name={selectedDailyPlayer.nickname} fill={COLORS[players.findIndex((p) => p.id === selectedDailyPlayer.id) % COLORS.length]} />
-                      ) : null}
+                        return (
+                          <Bar
+                            key={p.id}
+                            dataKey={p.id}
+                            name={p.nickname}
+                            fill={COLORS[i % COLORS.length]}
+                          />
+                        );
+                      })
+                    ) : selectedDailyPlayer ? (
+                      <Bar
+                        dataKey="selected"
+                        name={selectedDailyPlayer.nickname}
+                        fill={
+                          COLORS[
+                            players.findIndex((p) => p.id === selectedDailyPlayer.id) %
+                              COLORS.length
+                          ]
+                        }
+                      />
+                    ) : null}
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -215,51 +305,92 @@ function HistoryPage() {
           <Card className="p-6">
             <div className="mb-4">
               <h2 className="font-bold text-lg">Partidas por dia</h2>
-              <p className="text-sm text-muted-foreground">Quantas partidas cada jogador jogou por dia.</p>
+              <p className="text-sm text-muted-foreground">
+                Quantas partidas cada jogador jogou por dia.
+              </p>
             </div>
             <div className="h-80">
               {isLoading ? (
-                <div className="h-full flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mr-2" />Carregando...</div>
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Carregando...
+                </div>
               ) : visibleMatchRows.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados no período.</div>
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  Sem dados no período.
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={visibleMatchRows}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 100% / 0.08)" />
                     <XAxis dataKey="date" stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
                     <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} allowDecimals={false} />
-                    <Tooltip contentStyle={{ background: "oklch(0.21 0.025 260)", border: "1px solid oklch(0.3 0.03 260)", borderRadius: 8 }} />
+                    <Tooltip
+                      contentStyle={{
+                        background: "oklch(0.21 0.025 260)",
+                        border: "1px solid oklch(0.3 0.03 260)",
+                        borderRadius: 8,
+                      }}
+                    />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    {dailyPlayer === "all" ? dailyPlayers.map((p) => {
+                    {dailyPlayer === "all" ? (
+                      dailyPlayers.map((p) => {
                         const i = players.findIndex((pl) => pl.id === p.id);
-                        return <Bar key={p.id} dataKey={p.id} name={p.nickname} fill={COLORS[i % COLORS.length]} />;
-                      }) : selectedDailyPlayer ? (
-                        <Bar dataKey="selected" name={selectedDailyPlayer.nickname} fill={COLORS[players.findIndex((p) => p.id === selectedDailyPlayer.id) % COLORS.length]} />
-                      ) : null}
+                        return (
+                          <Bar
+                            key={p.id}
+                            dataKey={p.id}
+                            name={p.nickname}
+                            fill={COLORS[i % COLORS.length]}
+                          />
+                        );
+                      })
+                    ) : selectedDailyPlayer ? (
+                      <Bar
+                        dataKey="selected"
+                        name={selectedDailyPlayer.nickname}
+                        fill={
+                          COLORS[
+                            players.findIndex((p) => p.id === selectedDailyPlayer.id) %
+                              COLORS.length
+                          ]
+                        }
+                      />
+                    ) : null}
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </div>
           </Card>
 
-
-
-
-
-
           <Card className="overflow-hidden">
             <div className="p-6 border-b border-border flex flex-wrap items-center gap-3">
               <h2 className="font-bold text-lg">Snapshots</h2>
               <div className="ml-auto flex flex-wrap gap-2">
-                <Button size="sm" variant={selectedPlayer === "all" ? "default" : "outline"} onClick={() => setSelectedPlayer("all")}>Todos</Button>
+                <Button
+                  size="sm"
+                  variant={selectedPlayer === "all" ? "default" : "outline"}
+                  onClick={() => setSelectedPlayer("all")}
+                >
+                  Todos
+                </Button>
                 {players.map((p) => (
-                  <Button key={p.id} size="sm" variant={selectedPlayer === p.id ? "default" : "outline"} onClick={() => setSelectedPlayer(p.id)}>{p.nickname}</Button>
+                  <Button
+                    key={p.id}
+                    size="sm"
+                    variant={selectedPlayer === p.id ? "default" : "outline"}
+                    onClick={() => setSelectedPlayer(p.id)}
+                  >
+                    {p.nickname}
+                  </Button>
                 ))}
               </div>
             </div>
             <div className="overflow-x-auto">
               {tableRows.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">Nenhum snapshot disponível.</div>
+                <div className="py-12 text-center text-muted-foreground">
+                  Nenhum snapshot disponível.
+                </div>
               ) : (
                 <table className="w-full text-sm">
                   <thead className="bg-secondary/50 text-muted-foreground">
@@ -274,11 +405,18 @@ function HistoryPage() {
                   <tbody>
                     {tableRows.map((s, idx) => (
                       <tr key={`${s.playerId}-${idx}`} className="border-t border-border">
-                        <td className="p-3 pl-6 text-muted-foreground">{new Date(s.snapshotDate).toLocaleDateString("pt-BR")}</td>
+                        <td className="p-3 pl-6 text-muted-foreground">
+                          {new Date(s.snapshotDate).toLocaleDateString("pt-BR")}
+                        </td>
                         <td className="p-3 font-medium">{s.nickname}</td>
-                        <td className="p-3"><TierBadge tier={s.tier} rank={s.rank} lp={s.leaguePoints} /></td>
+                        <td className="p-3">
+                          <TierBadge tier={s.tier} rank={s.rank} lp={s.leaguePoints} />
+                        </td>
                         <td className="p-3 text-right tabular-nums">{rankTotalLp(s)}</td>
-                        <td className="p-3 pr-6 text-right tabular-nums"><span className="text-success">{s.wins}</span>/<span className="text-destructive">{s.losses}</span></td>
+                        <td className="p-3 pr-6 text-right tabular-nums">
+                          <span className="text-success">{s.wins}</span>/
+                          <span className="text-destructive">{s.losses}</span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
