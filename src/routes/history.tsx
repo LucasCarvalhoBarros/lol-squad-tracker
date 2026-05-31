@@ -6,7 +6,7 @@ import { rankTotalLp } from "@/lib/lol";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TierBadge } from "@/components/TierBadge";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Loader2, AlertCircle, LineChart as LineChartIcon } from "lucide-react";
 import type { RankEntry } from "@/lib/types";
 
