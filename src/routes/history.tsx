@@ -179,7 +179,7 @@ function HistoryPage() {
             <div className="h-80">
               {isLoading ? (
                 <div className="h-full flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mr-2" />Carregando...</div>
-              ) : dailyStats.lpRows.length === 0 ? (
+              ) : visibleLpRows.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados no período.</div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
