@@ -94,12 +94,23 @@ function HistoryPage() {
   }, [filtered, players]);
 
 
+  const selectedDailyPlayer = players.find((p) => p.id === dailyPlayer);
+  const dailyPlayers = dailyPlayer === "all" ? players : selectedDailyPlayer ? [selectedDailyPlayer] : [];
+
   const visibleLpRows = dailyPlayer === "all"
     ? dailyStats.lpRows
-    : dailyStats.lpRows.filter((r) => r[dailyPlayer] !== undefined);
+    : dailyStats.lpRows.reduce<Record<string, number | string>[]>((rows, row) => {
+      const value = row[dailyPlayer];
+      if (typeof value === "number") rows.push({ date: row.date, selected: value });
+      return rows;
+    }, []);
   const visibleMatchRows = dailyPlayer === "all"
     ? dailyStats.matchRows
-    : dailyStats.matchRows.filter((r) => r[dailyPlayer] !== undefined);
+    : dailyStats.matchRows.reduce<Record<string, number | string>[]>((rows, row) => {
+      const value = row[dailyPlayer];
+      if (typeof value === "number") rows.push({ date: row.date, selected: value });
+      return rows;
+    }, []);
 
   const tableRows = filtered
     .filter((s) => selectedPlayer === "all" || s.playerId === selectedPlayer)
