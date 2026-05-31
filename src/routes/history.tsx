@@ -94,6 +94,13 @@ function HistoryPage() {
   }, [filtered, players]);
 
 
+  const visibleLpRows = dailyPlayer === "all"
+    ? dailyStats.lpRows
+    : dailyStats.lpRows.filter((r) => r[dailyPlayer] !== undefined);
+  const visibleMatchRows = dailyPlayer === "all"
+    ? dailyStats.matchRows
+    : dailyStats.matchRows.filter((r) => r[dailyPlayer] !== undefined);
+
   const tableRows = filtered
     .filter((s) => selectedPlayer === "all" || s.playerId === selectedPlayer)
     .sort((a, b) => b.snapshotDate.localeCompare(a.snapshotDate))
