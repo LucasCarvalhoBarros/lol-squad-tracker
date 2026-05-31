@@ -183,7 +183,7 @@ function HistoryPage() {
                 <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados no período.</div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dailyStats.lpRows}>
+                  <BarChart data={visibleLpRows}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 100% / 0.08)" />
                     <XAxis dataKey="date" stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
                     <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
