@@ -200,12 +200,12 @@ function HistoryPage() {
                     <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} />
                     <Tooltip contentStyle={{ background: "oklch(0.21 0.025 260)", border: "1px solid oklch(0.3 0.03 260)", borderRadius: 8 }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    {players
-                      .filter((p) => dailyPlayer === "all" || p.id === dailyPlayer)
-                      .map((p) => {
+                    {dailyPlayer === "all" ? dailyPlayers.map((p) => {
                         const i = players.findIndex((pl) => pl.id === p.id);
                         return <Bar key={p.id} dataKey={p.id} name={p.nickname} fill={COLORS[i % COLORS.length]} />;
-                      })}
+                      }) : selectedDailyPlayer ? (
+                        <Bar dataKey="selected" name={selectedDailyPlayer.nickname} fill={COLORS[players.findIndex((p) => p.id === selectedDailyPlayer.id) % COLORS.length]} />
+                      ) : null}
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -230,12 +230,12 @@ function HistoryPage() {
                     <YAxis stroke="hsl(0 0% 100% / 0.5)" fontSize={11} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: "oklch(0.21 0.025 260)", border: "1px solid oklch(0.3 0.03 260)", borderRadius: 8 }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    {players
-                      .filter((p) => dailyPlayer === "all" || p.id === dailyPlayer)
-                      .map((p) => {
+                    {dailyPlayer === "all" ? dailyPlayers.map((p) => {
                         const i = players.findIndex((pl) => pl.id === p.id);
                         return <Bar key={p.id} dataKey={p.id} name={p.nickname} fill={COLORS[i % COLORS.length]} />;
-                      })}
+                      }) : selectedDailyPlayer ? (
+                        <Bar dataKey="selected" name={selectedDailyPlayer.nickname} fill={COLORS[players.findIndex((p) => p.id === selectedDailyPlayer.id) % COLORS.length]} />
+                      ) : null}
                   </BarChart>
                 </ResponsiveContainer>
               )}
